@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FFFFFF;
+    color: #1A1A1A;
+  }
+}
+
+/* Utilities for touch friendly & clean cards */
+.card-surface {
+  background-color: #F7F7F8;
+  border: 1px solid #E5E5E5;
+  border-radius: 0.375rem; /* rounded-md */
+}
