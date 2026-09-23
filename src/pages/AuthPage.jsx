@@ -1,18 +1,44 @@
 import React, { useState } from 'react';
-import { Wrench, Shield, UserCheck, ArrowRight } from 'lucide-react';
+import { Wrench, Shield, UserCheck, ArrowRight, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { USER_ROLES } from '../types/status';
+import { api } from '../services/api';
 
 export const AuthPage = () => {
-  const { switchRole, navigateTo } = useAuth();
+  const { switchRole, loginUser, navigateTo } = useAuth();
+  const [isRegister, setIsRegister] = useState(false);
   const [selectedRole, setSelectedRole] = useState(USER_ROLES.CUSTOMER);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    switchRole(selectedRole);
-    navigateTo(selectedRole === USER_ROLES.OWNER ? 'owner_dashboard' : 'marketplace');
+    setErrorMsg('');
+    setLoading(true);
+
+    try {
+      if (isRegister) {
+        const newUser = await api.register({
+          name: name || 'User',
+          email,
+          password,
+          role: selectedRole,
+        });
+        loginUser(newUser);
+        navigateTo(selectedRole === USER_ROLES.OWNER ? 'owner_dashboard' : 'marketplace');
+      } else {
+        const user = await api.login(email || (selectedRole === USER_ROLES.OWNER ? "owner@equiprent.com" : "customer@equiprent.com"), password || "password");
+        loginUser(user);
+        navigateTo(user.role === USER_ROLES.OWNER ? 'owner_dashboard' : 'marketplace');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,16 +49,24 @@ export const AuthPage = () => {
           <div className="p-3 bg-[#1A1A1A] text-white rounded-md mb-3">
             <Wrench className="w-6 h-6 text-green-400" />
           </div>
-          <h2 className="text-xl font-bold text-[#1A1A1A]">Welcome to EquipRent</h2>
+          <h2 className="text-xl font-bold text-[#1A1A1A]">
+            {isRegister ? 'Create an Account' : 'Sign in to EquipRent'}
+          </h2>
           <p className="text-xs text-[#6B7280] mt-1">
-            Sign in to manage equipment rentals or browse available inventory.
+            {isRegister ? 'Register as a Customer or Equipment Owner' : 'Enter your credentials to access your portal'}
           </p>
         </div>
 
-        {/* Role Toggle Selector */}
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-xs text-[#DC2626] font-semibold rounded-md">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Role Selector */}
         <div className="mb-6">
           <label className="block text-xs font-semibold text-[#6B7280] mb-2 text-center">
-            Select Your Account Role
+            Select Account Role
           </label>
           <div className="grid grid-cols-2 gap-2 bg-white border border-[#E5E5E5] p-1.5 rounded-md">
             <button
@@ -62,14 +96,28 @@ export const AuthPage = () => {
           </div>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {isRegister && (
+            <div>
+              <label className="block text-xs font-semibold text-[#1A1A1A] mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Alice Smith"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-white border border-[#E5E5E5] rounded-md focus:outline-none focus:border-gray-900"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-[#1A1A1A] mb-1">Email Address</label>
             <input
               type="email"
               required
-              placeholder={selectedRole === USER_ROLES.OWNER ? "owner@equiprent.com" : "customer@example.com"}
+              placeholder={selectedRole === USER_ROLES.OWNER ? "owner@equiprent.com" : "customer@equiprent.com"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-white border border-[#E5E5E5] rounded-md focus:outline-none focus:border-gray-900"
@@ -90,15 +138,21 @@ export const AuthPage = () => {
 
           <button
             type="submit"
+            disabled={loading}
             className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-[#1A1A1A] hover:bg-black rounded-md flex items-center justify-center gap-2 transition-colors mt-2"
           >
-            Continue as {selectedRole === USER_ROLES.OWNER ? 'Owner' : 'Customer'}
+            {loading ? 'Processing...' : (isRegister ? 'Create Account' : 'Sign In')}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-[#E5E5E5] text-center text-xs text-[#6B7280]">
-          Demo Mode: Click continue to enter without password verification.
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setIsRegister(!isRegister)}
+            className="text-xs text-[#6B7280] hover:text-[#1A1A1A] underline font-medium"
+          >
+            {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register here"}
+          </button>
         </div>
       </div>
     </div>
